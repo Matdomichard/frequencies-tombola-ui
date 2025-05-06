@@ -1,12 +1,50 @@
-import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Component, computed } from '@angular/core';
+import { RouterModule, RouterOutlet, Router } from '@angular/router';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatButtonModule } from '@angular/material/button';
+import { AuthService } from './core/services/auth.service';
+import { NgIf } from '@angular/common';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
-  templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  standalone: true,
+  imports: [
+    RouterOutlet,
+    RouterModule,
+    NgIf,
+    MatToolbarModule,
+    MatButtonModule
+  ],
+  template: `
+    <mat-toolbar *ngIf="auth.isAuthenticated()" color="primary">
+      🎟️ Frequencies Tombola
+      <span class="spacer"></span>
+      <button mat-button routerLink="/">Dashboard</button>
+      <button mat-button routerLink="/tickets">Tickets</button>
+      <button mat-button routerLink="/prizes">Lots</button>
+      <button mat-button routerLink="/configuration">Configuration</button>
+      <button mat-button routerLink="/draw">Tirage</button>
+      <button mat-button (click)="logout()">Déconnexion</button>
+    </mat-toolbar>²
+
+    <router-outlet />
+  `,
+  styles: [`
+    mat-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .spacer {
+      flex: 1;
+    }
+  `]
 })
 export class AppComponent {
-  title = 'frequencies-tombola-ui';
+  constructor(public auth: AuthService, private router: Router) {}
+
+  logout(): void {
+    this.auth.clearCredentials();
+    this.router.navigate(['/login']);
+  }
 }
