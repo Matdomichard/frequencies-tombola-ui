@@ -218,4 +218,8 @@ draw(tombolaId: number): Observable<DrawResult> {
     );
   }
   
+  /** DELETE a tombola */
+  deleteTombola(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/tombolas/${id}`);
+  }
 }

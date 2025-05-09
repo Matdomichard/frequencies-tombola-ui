@@ -76,7 +76,6 @@ import { DrawResult }        from '../../core/models/draw-result.model';
                            [color]="lot.status === 'ASSIGNED' ? 'primary' : 'accent'"
                            [selected]="true">
                     {{ lot.name }}
-                    <small class="lot-status">[{{ lot.status }}]</small>
                   </mat-chip>
                 </mat-chip-list>
                 <span *ngIf="!p.assignedLots?.length" class="no-lots">Aucun lot</span>

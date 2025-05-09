@@ -3,98 +3,290 @@ import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatTableModule } from '@angular/material/table';
 import { Router } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { Tombola } from '../../core/models/tombola.model';
 import { HelloAssoForm } from '../../core/models/hello-asso-form.model';
+import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule],
+  imports: [
+    CommonModule, 
+    MatCardModule, 
+    MatIconModule, 
+    MatButtonModule,
+    MatDialogModule,
+    MatTableModule
+  ],
   template: `
-    <div class="dashboard">
-      <mat-card>
-        <mat-card-title>🎯 Tombolas en base de données</mat-card-title>
-        <mat-card-content>
-          <div *ngIf="tombolas.length === 0">Aucune tombola enregistrée.</div>
-          <div *ngFor="let tombola of tombolas">
-            <mat-card class="tombola-card">
-              <mat-card-title>{{ tombola.name }}</mat-card-title>
-              <mat-card-subtitle>{{ tombola.createdAt | date:'shortDate' }}</mat-card-subtitle>
-              <button mat-raised-button color="primary" (click)="selectTombola(tombola)">
-                Voir détails
-              </button>
-              <span *ngIf="tombola.helloAssoFormSlug" class="active-badge">LINKED</span>
-            </mat-card>
-          </div>
-        </mat-card-content>
-      </mat-card>
+    <div class="dashboard-container">
+      <header class="welcome-header">
+        <h1>🎉 Bienvenue sur la Tombola Frequencies</h1>
+        <p class="subtitle">Gérez vos tombolas associatives en toute simplicité</p>
+      </header>
 
-      <mat-card>
-        <mat-card-title>📥 Formulaires HelloAsso disponibles</mat-card-title>
-        <mat-card-content>
-          <div *ngIf="helloAssoForms.length === 0">Aucun formulaire HelloAsso disponible.</div>
-          <div *ngFor="let form of helloAssoForms">
-            <mat-card class="tombola-card">
-              <mat-card-title>{{ form.title }}</mat-card-title>
-              <mat-card-subtitle>{{ form.formType }} - {{ form.state }}</mat-card-subtitle>
-              <a [href]="form.url" target="_blank">Ouvrir sur HelloAsso</a>
-              <div>Créé le : {{ form.meta.createdAt | date:'short' }}</div>
-              <button mat-raised-button color="accent" (click)="createTombolaFromForm(form)">
-                Créer une tombola à partir de ce formulaire
-              </button>
-            </mat-card>
-          </div>
-        </mat-card-content>
-      </mat-card>
+      <div class="dashboard-grid">
+        <mat-card class="dashboard-card tombolas-card">
+          <mat-card-header>
+            <mat-card-title>
+              <div class="card-title">
+                <mat-icon>emoji_events</mat-icon>
+                Tombolas enregistrées
+              </div>
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div *ngIf="tombolas.length === 0" class="empty-state">
+              <mat-icon>info</mat-icon>
+              <p>Aucune tombola n'est enregistrée pour le moment</p>
+            </div>
+            <div *ngFor="let tombola of tombolas" class="tombola-item">
+              <mat-card class="inner-card">
+                <div class="tombola-content">
+                  <div class="tombola-info">
+                    <h3>{{ tombola.name }}</h3>
+                    <p class="date">Créée le {{ tombola.createdAt | date:'shortDate' }}</p>
+                  </div>
+                  <button mat-raised-button color="primary" (click)="selectTombola(tombola)">
+                    <mat-icon>visibility</mat-icon>
+                    Voir détails
+                  </button>
+                </div>
+              </mat-card>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="dashboard-card forms-card">
+          <mat-card-header>
+            <mat-card-title>
+              <div class="card-title">
+                <mat-icon>description</mat-icon>
+                Formulaires HelloAsso disponibles
+              </div>
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div *ngIf="helloAssoForms.length === 0" class="empty-state">
+              <mat-icon>info</mat-icon>
+              <p>Aucun formulaire HelloAsso disponible</p>
+            </div>
+            <div *ngFor="let form of helloAssoForms" class="form-item">
+              <mat-card class="inner-card">
+                <div class="form-content">
+                  <div class="form-info">
+                    <h3>{{ form.title }}</h3>
+                    <p class="type-badge">{{ form.formType }} - {{ form.state }}</p>
+                    <p class="date">Créé le {{ form.meta.createdAt | date:'short' }}</p>
+                    <a [href]="form.url" target="_blank" class="helloasso-link">
+                      <mat-icon>open_in_new</mat-icon>
+                      Voir sur HelloAsso
+                    </a>
+                  </div>
+                  <button mat-raised-button color="accent" (click)="createTombolaFromForm(form)">
+                    <mat-icon>add_circle</mat-icon>
+                    Créer une tombola
+                  </button>
+                </div>
+              </mat-card>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
     </div>
   `,
   styles: [`
-    .dashboard { padding: 20px; }
-    mat-card { max-width: 600px; margin: auto; margin-bottom: 20px; }
-    .active-badge { color: green; font-weight: bold; margin-left: 10px; }
-    .tombola-card { margin-bottom: 10px; }
+    .dashboard-container {
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .welcome-header {
+      text-align: center;
+      margin-bottom: 2rem;
+      color: #333;
+    }
+
+    .welcome-header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      font-weight: 300;
+    }
+
+    .subtitle {
+      font-size: 1.2rem;
+      color: #666;
+      margin: 0;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+    }
+
+    .dashboard-card {
+      height: 100%;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.25rem;
+      color: #333;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: #666;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .empty-state mat-icon {
+      font-size: 3rem;
+      width: 3rem;
+      height: 3rem;
+      color: #ccc;
+    }
+
+    .inner-card {
+      margin-bottom: 1rem;
+      border-radius: 8px;
+      background: #f8f9fa;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .inner-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .tombola-content, .form-content {
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .tombola-info h3, .form-info h3 {
+      margin: 0;
+      color: #333;
+      font-size: 1.1rem;
+    }
+
+    .date {
+      color: #666;
+      font-size: 0.9rem;
+      margin: 0.5rem 0;
+    }
+
+    .type-badge {
+      display: inline-block;
+      background: #e3f2fd;
+      color: #1976d2;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      margin: 0.5rem 0;
+    }
+
+    .helloasso-link {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      color: #1976d2;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    .helloasso-link:hover {
+      text-decoration: underline;
+    }
+
+    button mat-icon {
+      margin-right: 0.5rem;
+    }
   `]
 })
 export class DashboardComponent implements OnInit {
   tombolas: Tombola[] = [];
   helloAssoForms: HelloAssoForm[] = [];
+  lots: any[] = [];  // Ajoutez le type approprié selon votre modèle
+  displayedColumns: string[] = ['name', 'description', 'donor', 'actions'];
 
   constructor(
-    private apiService: ApiService,
-    private router: Router
+    private api: ApiService,
+    private router: Router,
+    private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
-    this.apiService.getTombolas().subscribe({
-      next: (data: Tombola[]) => this.tombolas = data,
-      error: (err: any) => console.error('Erreur chargement tombolas', err)
-    });
+    this.loadTombolas();
+    this.loadHelloAssoForms();
+  }
 
-    this.apiService.getHelloAssoForms().subscribe({
-      next: (forms: HelloAssoForm[]) => this.helloAssoForms = forms,
-      error: (err: any) => console.error('Error loading HelloAsso forms', err)
+  loadTombolas(): void {
+    this.api.getTombolas().subscribe({
+      next: (data) => this.tombolas = data,
+      error: (err) => console.error('Error loading tombolas', err)
+    });
+  }
+
+  loadHelloAssoForms(): void {
+    this.api.getHelloAssoForms().subscribe({
+      next: (data) => this.helloAssoForms = data,
+      error: (err) => console.error('Error loading HelloAsso forms', err)
     });
   }
 
   selectTombola(tombola: Tombola): void {
-    console.log('Tombola sélectionnée:', tombola);
     this.router.navigate(['/tombolas', tombola.id]);
   }
 
   createTombolaFromForm(form: HelloAssoForm): void {
-    const newTombola = {
+    const newTombola: Partial<Tombola> = {
       name: form.title,
       helloAssoFormSlug: form.formSlug
     };
 
-    this.apiService.createTombola(newTombola).subscribe({
-      next: (saved: Tombola) => {
-        console.log('Tombola créée depuis HelloAsso', saved);
+    this.api.createTombola(newTombola).subscribe({
+      next: (saved) => {
         this.tombolas.push(saved);
+        this.router.navigate(['/tombolas', saved.id]);
       },
-      error: (err: any) => console.error('Erreur création tombola', err)
+      error: (err) => console.error('Error creating tombola', err)
+    });
+  }
+
+  deleteTombola(tombola: Tombola): void {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Confirmation de suppression',
+        message: `Êtes-vous sûr de vouloir supprimer la tombola "${tombola.name}" ? Cette action est irréversible.`
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.api.deleteTombola(tombola.id).subscribe({
+          next: () => {
+            this.tombolas = this.tombolas.filter(t => t.id !== tombola.id);
+          },
+          error: (err: any) => console.error('Erreur lors de la suppression de la tombola', err)
+        });
+      }
     });
   }
 }

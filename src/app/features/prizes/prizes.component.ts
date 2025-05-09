@@ -1,4 +1,5 @@
-import { Component, Input, ChangeDetectorRef, SimpleChanges } from '@angular/core';
+import { Component, Input, ChangeDetectorRef, SimpleChanges, ViewChild } from '@angular/core';
+import { NgModel } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,6 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 interface NewLot {
   name: string;
@@ -26,7 +28,8 @@ interface NewLot {
     MatTableModule,
     MatFormFieldModule,
     MatInputModule,
-    FormsModule
+    FormsModule,
+    MatTooltipModule
   ],
   template: `
     <mat-card class="prizes-card">
@@ -40,7 +43,8 @@ interface NewLot {
         <div class="inline-form">
           <mat-form-field appearance="outline">
             <mat-label>Nom du lot</mat-label>
-            <input matInput [(ngModel)]="newLot.name" required placeholder="Ex: iPhone 15">
+            <input matInput [(ngModel)]="newLot.name" #nameInput="ngModel" required placeholder="Ex: iPhone 15">
+            <mat-error *ngIf="nameInput.invalid && nameInput.touched">Ce champ est requis</mat-error>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
@@ -50,7 +54,8 @@ interface NewLot {
 
           <mat-form-field appearance="outline">
             <mat-label>Donateur</mat-label>
-            <input matInput [(ngModel)]="newLot.donorName" required placeholder="Ex: Apple">
+            <input matInput [(ngModel)]="newLot.donorName" #donorInput="ngModel" required placeholder="Ex: Apple">
+            <mat-error *ngIf="donorInput.invalid && donorInput.touched">Ce champ est requis</mat-error>
           </mat-form-field>
 
           <button mat-raised-button color="primary" 
@@ -90,6 +95,19 @@ interface NewLot {
             <th mat-header-cell *matHeaderCellDef>Statut</th>
             <td mat-cell *matCellDef="let lot" [class.assigned]="lot.status === 'ASSIGNED'">
               {{ lot.status }}
+            </td>
+          </ng-container>
+
+          <!-- Actions Column -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let lot">
+              <button mat-icon-button color="warn" 
+                      (click)="deleteLot(lot.id)"
+                      [disabled]="lot.status === 'ASSIGNED'"
+                      matTooltip="Supprimer le lot">
+                <mat-icon>delete</mat-icon>
+              </button>
             </td>
           </ng-container>
 
@@ -159,12 +177,50 @@ interface NewLot {
       margin-bottom: 20px;
       display: block;
     }
+
+    .mat-column-actions {
+      width: 60px;
+      text-align: center;
+    }
+
+    button[mat-icon-button] {
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+
+    button[mat-icon-button]:hover:not([disabled]) {
+      opacity: 1;
+    }
+
+    button[mat-icon-button][disabled] {
+      opacity: 0.3;
+    }
+
+    .required-field {
+      .mat-form-field-label {
+        color: inherit !important;
+      }
+    }
+
+    :host ::ng-deep .mat-form-field-required-marker {
+      display: none;
+    }
+
+    :host ::ng-deep .mat-form-field-invalid:not(.mat-focused) .mat-form-field-label {
+      color: rgba(0, 0, 0, 0.6);
+    }
+
+    :host ::ng-deep .mat-form-field:not(.mat-focused):not(.mat-form-field-invalid) .mat-form-field-label {
+      color: rgba(0, 0, 0, 0.6);
+    }
   `]
 })
 export class PrizesComponent {
+  @ViewChild('nameInput') nameInput!: NgModel;
+  @ViewChild('donorInput') donorInput!: NgModel;
   @Input() tombolaId!: number;
   lots: any[] = [];
-  displayedColumns: string[] = ['name', 'description', 'donor', 'status'];
+  displayedColumns: string[] = ['name', 'description', 'donor', 'status', 'actions'];
   newLot: NewLot = { 
     name: '', 
     description: '', 
@@ -197,11 +253,15 @@ export class PrizesComponent {
     if (this.tombolaId == null) return;
     this.api.addLot(this.tombolaId, this.newLot).subscribe({
       next: () => {
+        // Réinitialiser le formulaire et les états de validation
         this.newLot = { 
           name: '', 
           description: '', 
           donorName: '' 
         };
+        // Réinitialiser l'état des champs
+        if (this.nameInput) this.nameInput.control.markAsUntouched();
+        if (this.donorInput) this.donorInput.control.markAsUntouched();
         this.loadLots();
       },
       error: (err: Error) => console.error('Error adding lot', err)
@@ -211,5 +271,17 @@ export class PrizesComponent {
   importLots(): void {
     // TODO: Implémenter l'import des lots via Excel
     console.log('Import des lots à implémenter');
+  }
+
+  deleteLot(lotId: number): void {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce lot ?')) {
+      this.api.deleteLot(lotId).subscribe({
+        next: () => {
+          this.lots = this.lots.filter(lot => lot.id !== lotId);
+          this.cd.detectChanges();
+        },
+        error: (err: Error) => console.error('Erreur lors de la suppression du lot', err)
+      });
+    }
   }
 }
