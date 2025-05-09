@@ -5,7 +5,8 @@ export const appRoutes: Routes = [
   {
     path: '',
     canActivate: [authGuard],
-    loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent),
+    loadComponent: () =>
+      import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent),
   },
   {
     path: 'tickets',
@@ -18,9 +19,11 @@ export const appRoutes: Routes = [
     loadComponent: () => import('./features/prizes/prizes.component').then(m => m.PrizesComponent),
   },
   {
-    path: 'draw',
-    canActivate: [authGuard],
-    loadComponent: () => import('./features/draw/draw.component').then(m => m.DrawComponent),
+    path: 'tombolas/:id/draw',
+    canActivate: [authGuard],               // ← add guard here
+    loadComponent: () =>
+      import('./features/draw/draw.component')
+        .then(m => m.DrawComponent),
   },
   {
     path: 'configuration',
@@ -30,7 +33,9 @@ export const appRoutes: Routes = [
   {
     path: 'tombolas/:id',
     canActivate: [authGuard],
-    loadComponent: () => import('./features/tombola-detail/tombola-detail.component').then(m => m.TombolaDetailComponent),
+    loadComponent: () =>
+      import('./features/tombola-detail/tombola-detail.component')
+        .then(m => m.TombolaDetailComponent),
   },
   {
     path: 'login',

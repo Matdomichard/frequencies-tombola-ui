@@ -1,8 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 
 @Component({
@@ -14,15 +15,20 @@ import { ApiService } from '../../core/services/api.service';
       <mat-card>
         <mat-card-title>🎲 Tirage au Sort</mat-card-title>
         <mat-card-content>
-          <p *ngIf="!isDrawing && !winner">Cliquez pour tirer un gagnant.</p>
+          <p *ngIf="!isDrawing">Cliquez pour tirer les lots.</p>
           <p *ngIf="isDrawing">⏳ Tirage en cours...</p>
-          <p *ngIf="winner">🎉 Gagnant : <strong>{{ winner.name }}</strong></p>
-
-          <button mat-raised-button color="primary" (click)="drawWinner()" [disabled]="isDrawing">
-            <mat-icon>casino</mat-icon>
-            Tirer un gagnant
-          </button>
         </mat-card-content>
+        <mat-card-actions>
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="draw()"
+            [disabled]="isDrawing || tombolaId === null"
+          >
+            <mat-icon>casino</mat-icon>
+            Tirer les lots
+          </button>
+        </mat-card-actions>
       </mat-card>
     </div>
   `,
@@ -31,36 +37,40 @@ import { ApiService } from '../../core/services/api.service';
       padding: 20px;
       text-align: center;
     }
-    mat-card {
-      max-width: 500px;
-      margin: auto;
-    }
-    button {
-      margin-top: 20px;
-    }
+    mat-card { max-width: 500px; margin: auto; }
+    button { margin-top: 20px; }
   `]
 })
-export class DrawComponent {
+export class DrawComponent implements OnInit {
+  tombolaId: number | null = null;
   isDrawing = false;
-  winner: any = null;
 
-  constructor(private apiService: ApiService) {}
+  constructor(
+    private apiService: ApiService,
+    private route: ActivatedRoute
+  ) {}
 
-  drawWinner(): void {
+  ngOnInit(): void {
+    // read the tombola ID from the URL
+    const idParam = this.route.snapshot.paramMap.get('id');
+    this.tombolaId = idParam ? +idParam : null;
+  }
+
+  /** Trigger the backend draw endpoint for this tombola */
+  draw(): void {
+    if (this.tombolaId === null) return;
     this.isDrawing = true;
-    this.winner = null;
 
-    setTimeout(() => {
-      this.apiService.drawWinner().subscribe({
-        next: (data: any) => {
-          this.winner = data;
-          this.isDrawing = false;
-        },
-        error: (err: any) => {
-          console.error('❌ Erreur tirage', err);
-          this.isDrawing = false;
-        }
-      });
-    }, 2000);
+    // call new draw endpoint
+    this.apiService.draw(this.tombolaId).subscribe({
+      next: () => {
+        // you may optionally navigate back to detail or reload data
+        this.isDrawing = false;
+      },
+      error: err => {
+        console.error('❌ Erreur tirage', err);
+        this.isDrawing = false;
+      }
+    });
   }
 }
