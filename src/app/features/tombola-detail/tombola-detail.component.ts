@@ -13,6 +13,7 @@ import { Player }            from '../../core/models/player.model';
 import { Lot }               from '../../core/models/lot.model';
 import { PrizesComponent }   from '../prizes/prizes.component';
 import { DrawResult }        from '../../core/models/draw-result.model';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 
 @Component({
   selector: 'app-tombola-detail',
@@ -24,24 +25,34 @@ import { DrawResult }        from '../../core/models/draw-result.model';
     MatCheckboxModule,
     MatButtonModule,
     MatChipsModule,
+    MatSlideToggleModule,
     PrizesComponent
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   template: `
     <div class="container">
       <mat-card *ngIf="tombola" class="tombola-card">
-        <mat-card-header>
-          <mat-card-title class="text-center">{{ tombola.name }}</mat-card-title>
-          <mat-card-subtitle class="text-center">
+        <div class="tombola-header">
+          <h1 class="tombola-title">{{ tombola.name }}</h1>
+          <p class="tombola-subtitle">
             <strong>Créée le:</strong> {{ tombola.createdAt | date:'medium' }}
-          </mat-card-subtitle>
-        </mat-card-header>
-        <mat-card-content class="text-center">
-          <button mat-raised-button color="primary"
-                  (click)="draw()" 
-                  [disabled]="isDrawing">
-            🎲 Tirage au sort
-          </button>
+          </p>
+        </div>
+        <mat-card-content class="draw-content">
+          <div class="draw-container">
+            <mat-slide-toggle
+              [(ngModel)]="guaranteeOneLotPerParticipant"
+              color="primary"
+              class="guarantee-toggle">
+              Garantir un lot par participant
+            </mat-slide-toggle>
+            <button mat-raised-button color="primary"
+                    (click)="draw()" 
+                    [disabled]="isDrawing"
+                    class="draw-button">
+              🎲 Tirage au sort
+            </button>
+          </div>
         </mat-card-content>
       </mat-card>
 
@@ -65,6 +76,12 @@ import { DrawResult }        from '../../core/models/draw-result.model';
             <ng-container matColumnDef="email">
               <th mat-header-cell *matHeaderCellDef>Email</th>
               <td mat-cell *matCellDef="let p">{{ p.email }}</td>
+            </ng-container>
+
+            <!-- Après la colonne email, ajouter : -->
+            <ng-container matColumnDef="ticketNumber">
+              <th mat-header-cell *matHeaderCellDef> Tickets</th>
+              <td mat-cell *matCellDef="let p">{{ p.ticketNumber || 'Non attribué' }}</td>
             </ng-container>
 
             <!-- Lots -->
@@ -115,14 +132,74 @@ import { DrawResult }        from '../../core/models/draw-result.model';
 
     .tombola-card {
       margin-bottom: 30px;
+      padding: 32px;
+      background: linear-gradient(135deg, #ffffff, #f8f9fa);
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
-    .text-center {
+    .tombola-header {
       text-align: center;
+      margin-bottom: 16px;  // Réduit de 32px à 16px
     }
 
-    mat-card-header {
-      justify-content: center;
+    .tombola-title {
+      font-size: 3rem;
+      font-weight: 700;
+      color: #2c3e50;
+      margin: 0 0 16px 0;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      line-height: 1.2;
+    }
+
+    .tombola-subtitle {
+      font-size: 1.1rem;
+      color: #6c757d;
+      margin: 0;
+    }
+
+    .draw-content {
+      padding: 0;
+      margin-top: 20px;
+    }
+
+    .draw-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;  
+      padding: 14px;
+      background-color: #f8f9fa;
+      border-radius: 12px;
+    }
+
+    .guarantee-toggle {
+      font-size: 1.1rem;
+      border-radius: 8px;
+      margin-bottom: 0;  
+    }
+
+
+    .draw-button {
+      padding: 16px 48px;
+      font-size: 1.2rem;
+      font-weight: 500;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .draw-button:not([disabled]):hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .draw-button:not([disabled]):active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .players-table {
@@ -172,12 +249,16 @@ import { DrawResult }        from '../../core/models/draw-result.model';
     .players-card {
       margin-bottom: 30px;
     }
+
+    .draw-options {
+      margin-bottom: 20px;
+    }
   `]
 })
 export class TombolaDetailComponent implements OnInit {
   tombola?: Tombola;
   players: Player[] = [];
-  columns = ['player', 'email', 'lots', 'collected'];
+  columns = ['player', 'email', 'ticketNumber', 'lots', 'collected'];
   isDrawing = false;
 
   constructor(
@@ -204,6 +285,8 @@ export class TombolaDetailComponent implements OnInit {
     });
   }
 
+  guaranteeOneLotPerParticipant = false;
+
   draw(): void {
     console.log('Début de la fonction draw');
     if (!this.tombola) {
@@ -212,14 +295,23 @@ export class TombolaDetailComponent implements OnInit {
     }
     
     console.log('Tombola ID:', this.tombola.id);
+    console.log('Garantie un lot par participant:', this.guaranteeOneLotPerParticipant);
     this.isDrawing = true;
 
-    this.api.draw(this.tombola.id).subscribe({
+    this.api.draw(this.tombola.id, this.guaranteeOneLotPerParticipant).subscribe({
       next: (res: DrawResult) => {
         console.log('Résultat du tirage reçu:', res);
         if (res.players) {
           this.players = res.players;
+          this.refreshTombolaData(); 
           console.log('Joueurs mis à jour:', this.players.length);
+          console.log('Détail des lots attribués:', 
+            this.players.map(p => ({
+              nom: `${p.firstName} ${p.lastName}`,
+              ticket: p.ticketNumber,
+              lots: p.assignedLots?.map(l => l.name)
+            }))
+          );
         } else {
           console.error('Réponse invalide du serveur:', res);
         }

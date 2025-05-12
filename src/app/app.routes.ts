@@ -20,15 +20,10 @@ export const appRoutes: Routes = [
   },
   {
     path: 'tombolas/:id/draw',
-    canActivate: [authGuard],               // ← add guard here
+    canActivate: [authGuard],
     loadComponent: () =>
       import('./features/draw/draw.component')
         .then(m => m.DrawComponent),
-  },
-  {
-    path: 'configuration',
-    canActivate: [authGuard],
-    loadComponent: () => import('./features/configuration/configuration.component').then(m => m.ConfigurationComponent),
   },
   {
     path: 'tombolas/:id',

@@ -96,10 +96,24 @@ export class ApiService {
 
   /** Trigger a draw for a specific tombola */
 /** Trigger a draw and get back updated players+lots */
-draw(tombolaId: number): Observable<DrawResult> {
+draw(tombolaId: number, guaranteeOneLotPerParticipant: boolean = false): Observable<DrawResult> {
+  console.log(`Appel API draw avec tombolaId=${tombolaId} et guarantee=${guaranteeOneLotPerParticipant}`);
   return this.http.post<DrawResult>(
-    `${this.apiUrl}/tombolas/${tombolaId}/draw`,
+    `${this.apiUrl}/tombolas/${tombolaId}/draw?guaranteeOneLotPerParticipant=${guaranteeOneLotPerParticipant}`,
     {}
+  ).pipe(
+    map(result => {
+      console.log('Réponse brute du serveur:', result);
+      // S'assurer que les lots sont correctement associés aux joueurs
+      if (result.players) {
+        result.players = result.players.map(player => ({
+          ...player,
+          assignedLots: result.lots?.filter(lot => lot.assignedToId === player.id) || []
+        }));
+      }
+      console.log('Réponse transformée:', result);
+      return result;
+    })
   );
 }
 
@@ -111,20 +125,7 @@ draw(tombolaId: number): Observable<DrawResult> {
     return this.http.get<Statistics>(`${this.apiUrl}/stats`);
   }
 
-  // ⚙️ CONFIGURATION
-
-  /** GET application configuration */
-  getConfiguration(): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/config`);
-  }
-
-  /** UPDATE application configuration */
-  updateConfiguration(config: any): Observable<any> {
-    return this.http.put<any>(`${this.apiUrl}/config`, config);
-  }
-
   // ▶️ HELLOASSO FORMS
-
   /** GET HelloAsso forms (unwrap `{ data: [...] }` envelope) */
   getHelloAssoForms(): Observable<HelloAssoForm[]> {
     return this.http

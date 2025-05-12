@@ -20,7 +20,6 @@ import { NgIf } from '@angular/common';
       🎟️ Frequencies Tombola
       <span class="spacer"></span>
       <button mat-button routerLink="/">Dashboard</button>
-      <button mat-button routerLink="/configuration">Configuration</button>
       <button mat-button (click)="logout()">Déconnexion</button>
     </mat-toolbar>
 
