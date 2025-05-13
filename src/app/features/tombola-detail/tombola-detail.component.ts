@@ -10,10 +10,10 @@ import { MatButtonModule }   from '@angular/material/button';
 import { ApiService }        from '../../core/services/api.service';
 import { Tombola }           from '../../core/models/tombola.model';
 import { Player }            from '../../core/models/player.model';
-import { Lot }               from '../../core/models/lot.model';
 import { PrizesComponent }   from '../prizes/prizes.component';
 import { DrawResult }        from '../../core/models/draw-result.model';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-tombola-detail',
@@ -26,6 +26,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
     MatButtonModule,
     MatChipsModule,
     MatSlideToggleModule,
+    FormsModule,
     PrizesComponent
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -98,6 +99,13 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
                 <span *ngIf="!p.assignedLots?.length" class="no-lots">Aucun lot</span>
               </td>
             </ng-container>
+            <ng-container matColumnDef="paymentMethod">
+  <th mat-header-cell *matHeaderCellDef>Méthode de paiement</th>
+  <td mat-cell *matCellDef="let p">
+  {{ p.paymentMethod?.toLowerCase() === 'card' ? 'Carte' : 'Espèces' }}
+</td>
+
+</ng-container>
 
             <!-- Collected -->
             <ng-container matColumnDef="collected">
@@ -258,7 +266,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 export class TombolaDetailComponent implements OnInit {
   tombola?: Tombola;
   players: Player[] = [];
-  columns = ['player', 'email', 'ticketNumber', 'lots', 'collected'];
+  columns = ['player', 'email', 'ticketNumber', 'paymentMethod', 'lots', 'collected'];
   isDrawing = false;
 
   constructor(
@@ -281,6 +289,8 @@ export class TombolaDetailComponent implements OnInit {
   private refreshTombolaData() {
     if (!this.tombola) return;
     this.api.getPlayers(this.tombola.id).subscribe(players => {
+      console.log('Joueurs récupérés:', players);
+      console.log('Joueurs payant en espèces:', players.filter(p => p.paymentMethod === 'cash'));
       this.players = players;
     });
   }
