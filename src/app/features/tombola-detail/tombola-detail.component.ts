@@ -14,6 +14,8 @@ import { PrizesComponent }   from '../prizes/prizes.component';
 import { DrawResult }        from '../../core/models/draw-result.model';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { DrawComponent } from '../draw/draw.component';
 
 @Component({
   selector: 'app-tombola-detail',
@@ -27,7 +29,8 @@ import { FormsModule } from '@angular/forms';
     MatChipsModule,
     MatSlideToggleModule,
     FormsModule,
-    PrizesComponent
+    PrizesComponent,
+    DrawComponent  // Ajout du DrawComponent
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   template: `
@@ -47,11 +50,19 @@ import { FormsModule } from '@angular/forms';
               class="guarantee-toggle">
               Garantir un lot par participant
             </mat-slide-toggle>
+            
+            <!-- Remplacer le bouton par le composant de tirage -->
+            <app-draw 
+              *ngIf="isDrawing"
+              [tombolaId]="tombola.id"
+              (drawComplete)="onDrawComplete($event)">
+            </app-draw>
+            
             <button mat-raised-button color="primary"
-                    (click)="draw()" 
-                    [disabled]="isDrawing"
+                    *ngIf="!isDrawing"
+                    (click)="startDraw()" 
                     class="draw-button">
-              🎲 Tirage au sort
+              🎲 Lancer le tirage
             </button>
           </div>
         </mat-card-content>
@@ -271,7 +282,8 @@ export class TombolaDetailComponent implements OnInit {
 
   constructor(
     private api: ApiService,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -298,38 +310,16 @@ export class TombolaDetailComponent implements OnInit {
   guaranteeOneLotPerParticipant = false;
 
   draw(): void {
-    console.log('Début de la fonction draw');
+    console.log('%c🎲 DÉBUT TIRAGE', 'background: #2196f3; color: white; padding: 2px 5px; border-radius: 2px');
     if (!this.tombola) {
       console.log('Pas de tombola trouvée');
       return;
     }
     
-    console.log('Tombola ID:', this.tombola.id);
-    console.log('Garantie un lot par participant:', this.guaranteeOneLotPerParticipant);
-    this.isDrawing = true;
-
-    this.api.draw(this.tombola.id, this.guaranteeOneLotPerParticipant).subscribe({
-      next: (res: DrawResult) => {
-        console.log('Résultat du tirage reçu:', res);
-        if (res.players) {
-          this.players = res.players;
-          this.refreshTombolaData(); 
-          console.log('Joueurs mis à jour:', this.players.length);
-          console.log('Détail des lots attribués:', 
-            this.players.map(p => ({
-              nom: `${p.firstName} ${p.lastName}`,
-              ticket: p.ticketNumber,
-              lots: p.assignedLots?.map(l => l.name)
-            }))
-          );
-        } else {
-          console.error('Réponse invalide du serveur:', res);
-        }
-        this.isDrawing = false;
-      },
-      error: (err) => {
-        console.error('Erreur lors du tirage:', err);
-        this.isDrawing = false;
+    // Rediriger vers le composant de tirage
+    this.router.navigate(['/tombolas', this.tombola.id, 'draw'], {
+      queryParams: {
+        guarantee: this.guaranteeOneLotPerParticipant
       }
     });
   }
@@ -343,4 +333,15 @@ export class TombolaDetailComponent implements OnInit {
         p.hasCollectedPrize = updated.hasCollectedPrize;
       });
   }
+
+  startDraw(): void {
+    this.isDrawing = true;
+  }
+
+  onDrawComplete(result: any): void {
+    this.isDrawing = false;
+    this.refreshTombolaData();
+  }
+
+  // Supprimer l'ancienne méthode draw()
 }
