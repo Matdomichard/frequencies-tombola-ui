@@ -10,12 +10,9 @@ import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import * as XLSX from 'xlsx';
 
-interface NewLot {
-  name: string;
-  description: string;
-  donorName: string;
-}
+import { Lot } from '../../core/models/lot.model';
 
 @Component({
   selector: 'app-prizes',
@@ -38,71 +35,87 @@ interface NewLot {
         🎁 Lots
         </mat-card-title>
       </mat-card-header>
-      
       <mat-card-content>
         <div class="inline-form">
           <mat-form-field appearance="outline">
-            <mat-label>Nom du lot</mat-label>
-            <input matInput [(ngModel)]="newLot.name" #nameInput="ngModel" required placeholder="Ex: iPhone 15">
-            <mat-error *ngIf="nameInput.invalid && nameInput.touched">Ce champ est requis</mat-error>
+            <mat-label>Nom du lot*</mat-label>
+            <input matInput [(ngModel)]="newLot.name">
           </mat-form-field>
-
           <mat-form-field appearance="outline">
-            <mat-label>Description</mat-label>
-            <input matInput [(ngModel)]="newLot.description" placeholder="Ex: Dernier modèle">
+            <mat-label>Prénom du donateur</mat-label>
+            <input matInput [(ngModel)]="newLot.donorFirstName">
           </mat-form-field>
-
           <mat-form-field appearance="outline">
-            <mat-label>Donateur</mat-label>
-            <input matInput [(ngModel)]="newLot.donorName" #donorInput="ngModel" required placeholder="Ex: Apple">
-            <mat-error *ngIf="donorInput.invalid && donorInput.touched">Ce champ est requis</mat-error>
+            <mat-label>Nom du donateur</mat-label>
+            <input matInput [(ngModel)]="newLot.donorLastName">
           </mat-form-field>
-
-          <button mat-raised-button color="primary" 
+          <mat-form-field appearance="outline">
+            <mat-label>Entreprise</mat-label>
+            <input matInput [(ngModel)]="newLot.donorCompany">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Email*</mat-label>
+            <input matInput [(ngModel)]="newLot.donorEmail" type="email">
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Téléphone (optionnel)</mat-label>
+            <input matInput [(ngModel)]="newLot.donorPhone">
+          </mat-form-field>
+          <button mat-raised-button color="primary"
                   (click)="addLot()"
-                  [disabled]="!newLot.name || !newLot.donorName">
+                  class="add-lot-btn"
+                  [disabled]="!canAddLot()">
             <mat-icon>add</mat-icon>
             Ajouter
           </button>
         </div>
-
-        <button mat-stroked-button color="accent" class="import-button" (click)="importLots()">
+        <!-- Import Excel -->
+        <input
+          type="file"
+          accept=".xlsx"
+          style="display:none"
+          #excelInput
+          (change)="onExcelFileSelected($event)"
+        />
+        <button mat-stroked-button color="accent" class="import-button" (click)="excelInput.click()">
           <mat-icon>upload_file</mat-icon>
-          Importer des lots
+          Importer des lots (.xlsx)
         </button>
-
         <table mat-table [dataSource]="lots" class="lots-table">
-          <!-- Name Column -->
           <ng-container matColumnDef="name">
             <th mat-header-cell *matHeaderCellDef>Nom du lot</th>
             <td mat-cell *matCellDef="let lot">{{ lot.name }}</td>
           </ng-container>
-
-          <!-- Description Column -->
-          <ng-container matColumnDef="description">
-            <th mat-header-cell *matHeaderCellDef>Description</th>
-            <td mat-cell *matCellDef="let lot">{{ lot.description }}</td>
+          <ng-container matColumnDef="donorFirstName">
+            <th mat-header-cell *matHeaderCellDef>Prénom</th>
+            <td mat-cell *matCellDef="let lot">{{ lot.donorFirstName }}</td>
           </ng-container>
-
-          <!-- Donor Column -->
-          <ng-container matColumnDef="donor">
-            <th mat-header-cell *matHeaderCellDef>Donateur</th>
-            <td mat-cell *matCellDef="let lot">{{ lot.donorName }}</td>
+          <ng-container matColumnDef="donorLastName">
+            <th mat-header-cell *matHeaderCellDef>Nom</th>
+            <td mat-cell *matCellDef="let lot">{{ lot.donorLastName }}</td>
           </ng-container>
-
-          <!-- Status Column -->
+          <ng-container matColumnDef="donorCompany">
+            <th mat-header-cell *matHeaderCellDef>Entreprise</th>
+            <td mat-cell *matCellDef="let lot">{{ lot.donorCompany }}</td>
+          </ng-container>
+          <ng-container matColumnDef="donorEmail">
+            <th mat-header-cell *matHeaderCellDef>Email</th>
+            <td mat-cell *matCellDef="let lot">{{ lot.donorEmail }}</td>
+          </ng-container>
+          <ng-container matColumnDef="donorPhone">
+            <th mat-header-cell *matHeaderCellDef>Téléphone</th>
+            <td mat-cell *matCellDef="let lot">{{ lot.donorPhone }}</td>
+          </ng-container>
           <ng-container matColumnDef="status">
             <th mat-header-cell *matHeaderCellDef>Statut</th>
             <td mat-cell *matCellDef="let lot" [class.assigned]="lot.status === 'ASSIGNED'">
               {{ lot.status }}
             </td>
           </ng-container>
-
-          <!-- Actions Column -->
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let lot">
-              <button mat-icon-button color="warn" 
+              <button mat-icon-button color="warn"
                       (click)="deleteLot(lot.id)"
                       [disabled]="lot.status === 'ASSIGNED'"
                       matTooltip="Supprimer le lot">
@@ -110,7 +123,6 @@ interface NewLot {
               </button>
             </td>
           </ng-container>
-
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
         </table>
@@ -122,109 +134,50 @@ interface NewLot {
       margin: 20px 0;
       padding: 16px;
     }
-
-    .prizes-icon {
-      vertical-align: middle;
-      margin-right: 8px;
-      color: #ff4081;
-    }
-
-    .form-container {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      margin-bottom: 24px;
-      max-width: 600px;
-    }
-
-    .actions-bar {
-      display: flex;
-      gap: 16px;
-    }
-
     .lots-table {
       width: 100%;
     }
-
-    th.mat-header-cell {
-      background: #f5f5f5;
-      padding: 16px;
-      font-weight: bold;
-      color: rgba(0, 0, 0, 0.87);
-    }
-
-    td.mat-cell {
-      padding: 16px;
-    }
-
-    .assigned {
-      color: #4caf50;
-      font-weight: 500;
-    }
-
     .inline-form {
       display: flex;
-      gap: 16px;
+      gap: 12px;
       align-items: center;
       margin-bottom: 16px;
+      flex-wrap: wrap;
     }
-
     .inline-form mat-form-field {
-      flex: 1;
+      flex: 1 1 180px;
+      min-width: 150px;
+      max-width: 240px;
+      margin: 0;
     }
-
+    .add-lot-btn {
+      margin-left: 8px;
+      height: 40px;
+    }
     .import-button {
       margin-bottom: 20px;
       display: block;
     }
-
-    .mat-column-actions {
-      width: 60px;
-      text-align: center;
-    }
-
-    button[mat-icon-button] {
-      opacity: 0.7;
-      transition: opacity 0.2s;
-    }
-
-    button[mat-icon-button]:hover:not([disabled]) {
-      opacity: 1;
-    }
-
-    button[mat-icon-button][disabled] {
-      opacity: 0.3;
-    }
-
-    .required-field {
-      .mat-form-field-label {
-        color: inherit !important;
-      }
-    }
-
-    :host ::ng-deep .mat-form-field-required-marker {
-      display: none;
-    }
-
-    :host ::ng-deep .mat-form-field-invalid:not(.mat-focused) .mat-form-field-label {
-      color: rgba(0, 0, 0, 0.6);
-    }
-
-    :host ::ng-deep .mat-form-field:not(.mat-focused):not(.mat-form-field-invalid) .mat-form-field-label {
-      color: rgba(0, 0, 0, 0.6);
+    .assigned {
+      color: #4caf50;
+      font-weight: 500;
     }
   `]
 })
 export class PrizesComponent {
   @ViewChild('nameInput') nameInput!: NgModel;
-  @ViewChild('donorInput') donorInput!: NgModel;
   @Input() tombolaId!: number;
-  lots: any[] = [];
-  displayedColumns: string[] = ['name', 'description', 'donor', 'status', 'actions'];
-  newLot: NewLot = { 
-    name: '', 
-    description: '', 
-    donorName: '' 
+  lots: Lot[] = [];
+  displayedColumns: string[] = [
+    'name', 'donorFirstName', 'donorLastName', 'donorCompany', 'donorEmail', 'donorPhone', 'status', 'actions'
+  ];
+  newLot: Partial<Lot> = {
+    name: '',
+    donorFirstName: '',
+    donorLastName: '',
+    donorCompany: '',
+    donorEmail: '',
+    donorPhone: ''
   };
 
   constructor(
@@ -241,7 +194,7 @@ export class PrizesComponent {
   loadLots(): void {
     if (this.tombolaId == null) return;
     this.api.getLotsForTombola(this.tombolaId).subscribe({
-      next: (lots: any[]) => {
+      next: (lots: Lot[]) => {
         this.lots = lots;
         this.cd.detectChanges();
       },
@@ -249,28 +202,79 @@ export class PrizesComponent {
     });
   }
 
+  canAddLot(): boolean {
+    return !!(this.newLot.name && this.newLot.donorEmail);
+  }
+
   addLot(): void {
-    if (this.tombolaId == null) return;
+    if (this.tombolaId == null || !this.canAddLot()) return;
     this.api.addLot(this.tombolaId, this.newLot).subscribe({
       next: () => {
-        // Réinitialiser le formulaire et les états de validation
-        this.newLot = { 
-          name: '', 
-          description: '', 
-          donorName: '' 
+        this.newLot = {
+          name: '',
+          donorFirstName: '',
+          donorLastName: '',
+          donorCompany: '',
+          donorEmail: '',
+          donorPhone: ''
         };
-        // Réinitialiser l'état des champs
         if (this.nameInput) this.nameInput.control.markAsUntouched();
-        if (this.donorInput) this.donorInput.control.markAsUntouched();
         this.loadLots();
       },
       error: (err: Error) => console.error('Error adding lot', err)
     });
   }
 
-  importLots(): void {
-    // TODO: Implémenter l'import des lots via Excel
-    console.log('Import des lots à implémenter');
+  onExcelFileSelected(event: any): void {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+
+    reader.onload = (e: any) => {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+
+      const lotsFromExcel = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+      // Mapping adapté au fichier fourni
+      const mappedLots: Partial<Lot>[] = lotsFromExcel.map((row: any) => ({
+        name: row['Nom du lot']?.trim() || '',
+        donorFirstName: row['Prénom du donateur']?.trim() || '',
+        donorLastName: row['Nom du donateur']?.trim() || '',
+        donorCompany: row['Entreprise']?.trim() || '',
+        donorEmail: row['Email']?.trim() || '',
+        donorPhone: row['Téléphone']?.trim() || ''
+      }));
+
+      let createdCount = 0;
+      const importNext = (index: number) => {
+        if (index >= mappedLots.length) {
+          this.loadLots();
+          alert(`Import terminé. ${createdCount} lots créés.`);
+          return;
+        }
+        const lot = mappedLots[index];
+        if (!lot.name || !lot.donorEmail) {
+          importNext(index + 1);
+          return;
+        }
+        this.api.addLot(this.tombolaId, lot).subscribe({
+          next: () => {
+            createdCount++;
+            importNext(index + 1);
+          },
+          error: (err: Error) => {
+            console.error(`Erreur import lot: ${lot.name}`, err);
+            importNext(index + 1);
+          }
+        });
+      };
+      importNext(0);
+    };
+
+    reader.readAsArrayBuffer(file);
+    event.target.value = '';
   }
 
   deleteLot(lotId: number): void {
